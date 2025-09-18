@@ -416,6 +416,13 @@ dat2 <- dat2 %>%
 dat2_long_3 <- dat2_long_3 %>%
   mutate(oppdragstaker = recode(oppdragstaker, !!!temp2))
 
+dat2_long_figure <- dat2_long_3 %>% 
+  mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 
+  mutate(Tilstand= as.numeric(substr(tilstand, 1, 1))) %>% 
+  select(-NiN_variable_code, -NiN_variable_value) %>% 
+  distinct()
+
+
 
 saveRDS(dat2, "shinyData/naturtyper.rds")
 saveRDS(dat2_long_3, "shinyData/naturtyper_long.rds")

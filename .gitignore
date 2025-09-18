@@ -1,0 +1,21 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+#Exluding files
+*.xlsx 
+*.docx
+*.pdf
+*.png
+*.jpeg
+*.tiff
+*.tif
+*.psd
+*.csv
+*.txt
+.Rdata
+.httr-oauth
+.DS_Store
+.quarto
+

@@ -416,8 +416,31 @@ dat2 <- dat2 %>%
 dat2_long_3 <- dat2_long_3 %>%
   mutate(oppdragstaker = recode(oppdragstaker, !!!temp2))
 
+# The long data set is still slow to load. I will delete some more columns, see if that helps.
+dat2_long_4 <- dat2_long_3 %>%
+  rename(hovedokosystem = hovedøkosystem,
+         kartleggingsar = kartleggingsår, 
+         maned = måned) %>% 
+  select(
+    identifikasjon_lokalId,
+    hovedokosystem,
+    kartleggingsar,
+    lokalitetskvalitet,
+    mosaikk,
+    naturmangfold,
+    naturtype,
+    NiN_variable_code,
+    NiN_variable_value,
+    tilstand,
+    fylke,
+    region,
+    km2,
+    m2,
+    maned
+  )
+
 # Merge naturligÅpneOmråderILavlandet and naturligÅpneOmråderUnderSkoggrensa in hovedøkosystem
-dat2_long_4 <- dat2_long_3 %>%  
+dat2_long_4 <- dat2_long_4 %>%  
   mutate(hovedokosystem = ifelse(hovedokosystem == "naturligÅpneOmråderUnderSkoggrensa",
                                  "NaturligÅpneOmråderUnderSkoggrensa", hovedokosystem)) %>% 
   mutate(hovedokosystem = ifelse(hovedokosystem == "naturligÅpneOmråderILavlandet",
@@ -431,7 +454,14 @@ dat2_long_4 <- dat2_long_3 %>%
   mutate(hovedokosystem = ifelse(hovedokosystem == "våtmark",
                                "Våtmark", hovedokosystem))
 
-#rename(hovedokosystem = hovedøkosystem) %>% 
+#Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to Skog.
+dat2_long_4 <- dat2_long_4 %>%
+  mutate(naturtypekode_short = str_extract(naturtype, "^[^_]+")) %>%  #Extract naturtype code
+  mutate(hovedokosystem = if_else(
+    naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
+    "Skog",
+    hovedokosystem)
+)
 
 dat2_long_figure <- dat2_long_4 %>% 
   mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 

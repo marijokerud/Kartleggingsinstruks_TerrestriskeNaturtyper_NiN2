@@ -416,12 +416,29 @@ dat2 <- dat2 %>%
 dat2_long_3 <- dat2_long_3 %>%
   mutate(oppdragstaker = recode(oppdragstaker, !!!temp2))
 
-dat2_long_figure <- dat2_long_3 %>% 
+# Merge naturligÅpneOmråderILavlandet and naturligÅpneOmråderUnderSkoggrensa in hovedøkosystem
+dat2_long_4 <- dat2_long_3 %>%  
+  mutate(hovedokosystem = ifelse(hovedokosystem == "naturligÅpneOmråderUnderSkoggrensa",
+                                 "NaturligÅpneOmråderUnderSkoggrensa", hovedokosystem)) %>% 
+  mutate(hovedokosystem = ifelse(hovedokosystem == "naturligÅpneOmråderILavlandet",
+                                 "NaturligÅpneOmråderUnderSkoggrensa", hovedokosystem)) %>% 
+  mutate(hovedokosystem = ifelse(hovedokosystem == "fjell",
+                                 "Fjell", hovedokosystem)) %>% 
+  mutate(hovedokosystem = ifelse(hovedokosystem == "skog",
+                                 "Skog", hovedokosystem)) %>% 
+  mutate(hovedokosystem = ifelse(hovedokosystem == "semi-naturligMark",
+                                 "Semi-naturligMark", hovedokosystem)) %>% 
+  mutate(hovedokosystem = ifelse(hovedokosystem == "våtmark",
+                               "Våtmark", hovedokosystem))
+
+#rename(hovedokosystem = hovedøkosystem) %>% 
+
+dat2_long_figure <- dat2_long_4 %>% 
   mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 
   mutate(Tilstand= as.numeric(substr(tilstand, 1, 1))) %>% 
   select(-NiN_variable_code, -NiN_variable_value) %>% 
   distinct()
-
+dat2_long_figure
 
 
 saveRDS(dat2, "shinyData/naturtyper.rds")

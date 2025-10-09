@@ -253,9 +253,9 @@ dat2 <- dat %>%
   mutate(
     naturmangfold = recode(
       naturmangfold,
-      "lite" = "1 - Lite",
-      'moderat' = "2 - Moderat",
-      "stort" = "3 - Stort"
+      "lite" = "2 - Lite",
+      'moderat' = "3 - Moderat",
+      "stort" = "4 - Stort"
     )
   ) %>%
   mutate(

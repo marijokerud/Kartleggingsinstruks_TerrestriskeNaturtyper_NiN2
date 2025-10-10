@@ -244,28 +244,28 @@ dat2 <- dat %>%
   mutate(
     tilstand = recode(
       tilstand,
-      "sværtRedusert" = "1 - Svært redusert",
-      "dårlig" = "2 - Dårlig",
-      "moderat" = "3 - Moderat",
-      "god" = "4 - God"
+      "sværtRedusert" = "0 - Svært redusert",
+      "dårlig" = "1 - Dårlig",
+      "moderat" = "2 - Moderat",
+      "god" = "3 - God"
     )
   ) %>%
   mutate(
     naturmangfold = recode(
       naturmangfold,
-      "lite" = "2 - Lite",
-      'moderat' = "3 - Moderat",
-      "stort" = "4 - Stort"
+      "lite" = "1 - Lite",
+      'moderat' = "2 - Moderat",
+      "stort" = "3 - Stort"
     )
   ) %>%
   mutate(
     lokalitetskvalitet = recode(
       lokalitetskvalitet,
-      "sværtLavKvalitet" = "1 - Svært lav kvalitet",
-      'lavKvalitet' = "2 - Lav kvalitet",
-      "moderatKvalitet" = "3 - Moderat kvalitet",
-      "høyKvalitet" = "4 - Høy kvalitet",
-      "sværtHøyKvalitet" = "5 - Svært høy kvalitet"
+      "sværtLavKvalitet" = "0 - Svært lav kvalitet",
+      'lavKvalitet' = "1 - Lav kvalitet",
+      "moderatKvalitet" = "2 - Moderat kvalitet",
+      "høyKvalitet" = "3 - Høy kvalitet",
+      "sværtHøyKvalitet" = "3 - Svært høy kvalitet"
     )
   )
 

@@ -265,7 +265,7 @@ dat2 <- dat %>%
       'lavKvalitet' = "1 - Lav kvalitet",
       "moderatKvalitet" = "2 - Moderat kvalitet",
       "høyKvalitet" = "3 - Høy kvalitet",
-      "sværtHøyKvalitet" = "3 - Svært høy kvalitet"
+      "sværtHøyKvalitet" = "4 - Svært høy kvalitet"
     )
   )
 

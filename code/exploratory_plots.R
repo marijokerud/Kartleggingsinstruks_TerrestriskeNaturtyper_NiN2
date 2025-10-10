@@ -36,13 +36,17 @@ naturtype.underskoggrensa <- naturtype.data %>%
 naturtype.fjell <- naturtype.data %>% 
   filter(hovedokosystem == "Fjell")
 
+linetype.fjell <- c("solid", "dashed", "solid",   "dashed",  "solid",   "dashed",  "solid",  "solid", "solid")
+color.fjell <- c("#e31a1c", "#e31a1c", "#33a02c", "#33a02c", "#1f78b4", "#1f78b4", "#e6ab02", "#7570b3", "#e7298a")
 
 
 naturtype.plot <- naturtype.fjell %>% 
   ggplot(aes(y = Naturmangfold_mean, x = Tilstand_mean,
-             color = naturtype)) + 
+             color = naturtype, linetype = naturtype)) + 
   geom_errorbarh(aes(xmin = Tilstand_mean-Tilstand_sd, xmax = Tilstand_mean+Tilstand_sd)) +
   geom_errorbar(aes(ymin = Naturmangfold_mean-Naturmangfold_sd, ymax = Naturmangfold_mean+Naturmangfold_sd)) +
+  scale_linetype_manual(values = linetype.fjell) +
+  scale_color_manual(values = color.fjell) +
   scale_y_continuous(limits = c(0, 3.5), 
                      breaks = c(1, 2, 3),
                      labels = c("Lite", "Moderat", "Stort")) +
@@ -51,8 +55,8 @@ naturtype.plot <- naturtype.fjell %>%
                      labels = c("Svært redusert", "Dårlig", "Moderat", "God")) +
   labs(y = "Naturmanfoldskår",
        x = "Tilstandskår",
-       colour = "Naturtype"
-  ) +
+       colour = "Naturtype",   
+       linetype = "Naturtype" ) +
   theme_bw() +
   theme(axis.title.x = element_text(size=14,hjust=0.5),
         axis.title.y = element_text(size=14,vjust=1),

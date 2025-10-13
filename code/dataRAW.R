@@ -450,7 +450,7 @@ dat2_long_5 <- dat2_long_4 %>%
 dat2_long_figure <- dat2_long_5 %>% 
   mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 
   mutate(Tilstand= as.numeric(substr(tilstand, 1, 1))) %>% 
-  select(-NiN_variable_code, -NiN_variable_value) %>% 
+  #select(-NiN_variable_code, -NiN_variable_value) %>% 
   distinct()
 dat2_long_figure
 

@@ -455,6 +455,39 @@ dat2_long_figure <- dat2_long_5 %>%
 dat2_long_figure
 
 
+#identify duplicates
+dup.naturtype <- dat2_long_figure |>
+  dplyr::summarise(n = dplyr::n(), .by = c(identifikasjon_lokalId, hovedokosystem, kartleggingsar, lokalitetskvalitet, mosaikk, naturmangfold, naturtype,
+                                           naturtypekode_short, naturtype_full, tilstand, region, km2, m2, maned, oppdragstaker, Naturmangfold, Tilstand, 
+                                           NiN_variable_code)) |>
+  dplyr::filter(n > 1L)
+
+
+#remove duplicates
+data_clean1 <- dat2_long_figure |>
+  group_by(across(-NiN_variable_value)) %>%                 # group by all other columns
+  filter(!(is.na(NiN_variable_value) & any(!is.na(NiN_variable_value)))) %>%
+  ungroup()
+
+n_removed <- nrow(dat2_long_figure) - nrow(data_clean1)
+n_removed
+  
+dup2.naturtype <- data_clean1 |>
+  dplyr::summarise(n = dplyr::n(), .by = c(identifikasjon_lokalId, hovedokosystem, kartleggingsar, lokalitetskvalitet, mosaikk, naturmangfold, naturtype,
+                                           naturtypekode_short, naturtype_full, tilstand, region, km2, m2, maned, oppdragstaker, Naturmangfold, Tilstand, 
+                                           NiN_variable_code)) |>
+  dplyr::filter(n > 1L)  
+
+#remove a duplicate row in: 
+data_clean2 <- data_clean1 %>%
+  filter(
+    !(identifikasjon_lokalId == "NINFP2110037887" &
+        NiN_variable_code == "PRAK" &
+        NiN_variable_value %in% c(0, "0"))   # handle char or numeric 0
+  )
+
+dat2_long_figure <- data_clean2
+  
 saveRDS(dat2, "shinyData/naturtyper.rds")
 saveRDS(dat2_long_4, "shinyData/naturtyper_long.rds")
 

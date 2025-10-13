@@ -337,6 +337,7 @@ temp <- dat2_long_2 %>%
   ) %>%
   filter(rowsums > 0)
 
+####### START HERE IF SOMETHING IS WRONG IN CODE BELOW
 dat2_long_3 <- dat2_long_2 %>%
   filter(NiN_variable_code %in% temp$NiN_variable_code)
 
@@ -362,45 +363,44 @@ get_code <- dat2 %>%
   filter(grepl("ntyp", naturtypeKode)) %>%
   distinct(naturtype, .keep_all = T) %>%
   mutate(naturtypekode_short = str_remove(naturtypeKode, "ntyp_")) %>%
-  select(naturtypekode_short, naturtype)
+  select(naturtypekode_short, naturtype, naturtypeKode) %>% 
+  mutate(naturtype_full = paste(naturtypekode_short, naturtype, sep = "_"))
+
 dat2 <- dat2 %>%
-  left_join(get_code, by = "naturtype", keep = TRUE) %>%
+  left_join(get_code, by = "naturtype", multiple = "any", keep = FALSE) %>%
   mutate(
     naturtype_temp = paste(naturtypekode_short, naturtype, sep = "_"),
     naturtype = paste(naturtypekode_short, naturtype, naturtype_temp, sep = "_")
   )
+names(dat2)
+names(dat2_long_3)
 dat2_long_4 <- dat2_long_3 %>%
-  left_join(get_code, by = "naturtype") %>%
-  mutate(naturtype = paste(naturtypekode_short, naturtype, sep = "_"))
+  left_join(get_code, by = "naturtype") 
 
 # The long data set is slow to load. I will delete some columns, see if that helps.
 names(dat2_long_4)
 dat2_long_4 <- dat2_long_4 %>%
+  rename(hovedokosystem = hovedøkosystem,
+         kartleggingsar = kartleggingsår, 
+         maned = måned) %>% 
   select(
     identifikasjon_lokalId,
-    hovedøkosystem,
-    kartleggingsår,
-    kommuner,
-    kriterium_nærTruet,
-    kriterium_sentralØkosystemFunksjon,
-    kriterium_spesieltDårligKartlagt,
-    kriterium_truet,
+    hovedokosystem,
+    kartleggingsar,
     lokalitetskvalitet,
     mosaikk,
     naturmangfold,
     naturtype,
     naturtypekode_short,
+    naturtype_full,
     NiN_variable_code,
     NiN_variable_value,
-    oppdragstaker,
     tilstand,
-    usikkerhet,
-    objtype,
-    fylke,
     region,
     km2,
     m2,
-    måned
+    maned,
+    oppdragstaker
   )
 
 # Anonymise the company names
@@ -417,28 +417,6 @@ dat2 <- dat2 %>%
 dat2_long_4 <- dat2_long_4 %>%
   mutate(oppdragstaker = recode(oppdragstaker, !!!temp2))
 
-# The long data set is still slow to load. I will delete some more columns, see if that helps.
-dat2_long_4 <- dat2_long_4 %>%
-  rename(hovedokosystem = hovedøkosystem,
-         kartleggingsar = kartleggingsår, 
-         maned = måned) %>% 
-  select(
-    identifikasjon_lokalId,
-    hovedokosystem,
-    kartleggingsar,
-    lokalitetskvalitet,
-    mosaikk,
-    naturmangfold,
-    naturtype,
-    NiN_variable_code,
-    NiN_variable_value,
-    tilstand,
-    fylke,
-    region,
-    km2,
-    m2,
-    maned
-  )
 
 # Merge naturligÅpneOmråderILavlandet and naturligÅpneOmråderUnderSkoggrensa in hovedøkosystem
 dat2_long_4 <- dat2_long_4 %>%  
@@ -455,18 +433,21 @@ dat2_long_4 <- dat2_long_4 %>%
   mutate(hovedokosystem = ifelse(hovedokosystem == "våtmark",
                                "Våtmark", hovedokosystem))
 
-#Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to Skog.
-
-##################################
+###### Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to Skog.
+###### And change Høstingsskog (C02) to semi-naturlig
 dat2_long_5 <- dat2_long_4 %>%
-  mutate(naturtypekode_short = str_extract(naturtype, "^[^_]+")) %>%  #Extract naturtype code
   mutate(hovedokosystem = if_else(
     naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
     "Skog",
     hovedokosystem)
-)
+) %>% 
+  mutate(hovedokosystem = if_else(
+    naturtypekode_short == "C02" & hovedokosystem == "Skog",
+    "Semi-naturligMark",
+    hovedokosystem)
+  )
 
-dat2_long_figure <- dat2_long_4 %>% 
+dat2_long_figure <- dat2_long_5 %>% 
   mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 
   mutate(Tilstand= as.numeric(substr(tilstand, 1, 1))) %>% 
   select(-NiN_variable_code, -NiN_variable_value) %>% 
@@ -476,3 +457,6 @@ dat2_long_figure
 
 saveRDS(dat2, "shinyData/naturtyper.rds")
 saveRDS(dat2_long_4, "shinyData/naturtyper_long.rds")
+
+
+#mutate(naturtypekode_short = str_extract(naturtype, "^[^_]+")) %>%  #Extract naturtype code

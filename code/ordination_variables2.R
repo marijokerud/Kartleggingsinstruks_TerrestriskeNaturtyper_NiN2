@@ -18,30 +18,75 @@ dat.PCA <- dat %>%
 
 ### run pca per hovedokosystem
 
+prep_numeric <- function(dat.PCA) {
+  dat.PCA %>%
+    select(where(is.numeric)) %>%
+    # make non-finite values NA
+    mutate(across(everything(), ~ ifelse(is.finite(.), ., NA_real_))) %>%
+    # drop columns that are all NA
+    select(where(~ sum(!is.na(.)) > 0)) %>%
+    # drop zero-variance columns (after NAs removed)
+    select(where(~ sd(., na.rm = TRUE) > 0)) %>%
+    # drop rows that are all NA
+    filter(rowSums(!is.na(.)) > 0)
+}
+
 models <- dat.PCA %>%
   group_by(hovedokosystem) %>%
   nest() %>%
-  mutate(
-    # keep numeric variables only (drop grouping column etc.)
-    data_num = map(data, ~ select(.x, where(is.numeric))),
-    # mean-impute NAs per group (skip all-NA columns)
+  mutate(data_num = map(data, prep_numeric),
+    # mean-impute remaining NAs (safe: no all-NA cols remain)
     data_imp = map(data_num, ~ mutate(.x,
-                                      across(everything(), ~ { m <- mean(., na.rm = TRUE)
-                                      if (is.nan(m)) . else tidyr::replace_na(., m) })
+                                      across(everything(), ~ replace_na(., mean(., na.rm = TRUE)))
     )),
-    # run RDA for each group
-    rda = map(data_imp, ~ vegan::rda(.x, scale = TRUE)),
-    # extract scores
-    site_scores    = map(rda, ~ as.data.frame(vegan::scores(.x, display = "sites")[, 1:2])),
-    species_scores = map(rda, ~ as.data.frame(vegan::scores(.x, display = "species")[, 1:2])),
-    # variance explained on the first components
-    var_expl = map(rda, ~ {
-      ev <- vegan::eigenvals(.x); ev / sum(ev)
-    })
+    ok = map_lgl(data_imp, ~ nrow(.x) >= 2 && ncol(.x) >= 2),
+    rda = map2(data_imp, ok, ~ if (.y) vegan::rda(.x, scale = TRUE) else NULL),
+    site_scores    = map(rda, ~ if (is.null(.x)) NULL else as.data.frame(vegan::scores(.x, display = "sites")[, 1:2])),
+    species_scores = map(rda, ~ if (is.null(.x)) NULL else as.data.frame(vegan::scores(.x, display = "species")[, 1:2])),
+    var_expl = map(rda, ~ if (is.null(.x)) NULL else { ev <- vegan::eigenvals(.x); ev / sum(ev) })
   ) %>%
-  select(hovedokosystem, rda, data_imp, site_scores, species_scores, var_expl) %>%
+  select(hovedokosystem, ok, rda, data_imp, site_scores, species_scores, var_expl) %>%
   ungroup()
 
+#Extract all groups at once (tidy data frames)
+#Site scores (PC1/PC2) for all groups
+site_scores_all <- models %>%
+  filter(!vapply(rda, is.null, logical(1))) %>%   # keep groups with a model
+  transmute(
+    hovedokosystem,
+    site_scores = lapply(site_scores, function(x) {
+      as.data.frame(x)[, 1:2, drop = FALSE] %>%    # PC1, PC2
+        rownames_to_column("row_id") %>%
+        rename(PC1 = 2, PC2 = 3)
+    })
+  ) %>%
+  tidyr::unnest(site_scores)
+
+#Variable loadings (“species” scores) for all groups
+loadings_all <- models %>%
+  filter(!vapply(rda, is.null, logical(1))) %>%
+  transmute(
+    hlav = hovedokosystem,
+    species_scores = lapply(species_scores, function(x) {
+      as.data.frame(x)[, 1:2, drop = FALSE] %>%
+        rownames_to_column("variable") %>%
+        rename(PC1 = 2, PC2 = 3)
+    })
+  ) %>%
+  tidyr::unnest(species_scores) %>%
+  rename(hovedokosystem = hlav)
+
+#Variance explained per group
+var_expl_all <- models %>%
+  filter(!vapply(rda, is.null, logical(1))) %>%
+  transmute(
+    hovedokosystem,
+    var = lapply(rda, function(m) {
+      v <- vegan::eigenvals(m); tibble(PC = seq_along(v), var = as.numeric(v / sum(v)))
+    })
+  ) %>%
+  tidyr::unnest(var) %>%
+  mutate(var_pct = round(100 * var, 2))
 
 
 ##### OLD CODE ###########

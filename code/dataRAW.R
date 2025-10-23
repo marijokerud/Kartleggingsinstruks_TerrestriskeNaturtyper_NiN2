@@ -433,61 +433,7 @@ dat2_long_4 <- dat2_long_4 %>%
   mutate(hovedokosystem = ifelse(hovedokosystem == "våtmark",
                                "Våtmark", hovedokosystem))
 
-###### Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to Skog.
-###### And change Høstingsskog (C02) to semi-naturlig
-dat2_long_5 <- dat2_long_4 %>%
-  mutate(hovedokosystem = if_else(
-    naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
-    "Skog",
-    hovedokosystem)
-) %>% 
-  mutate(hovedokosystem = if_else(
-    naturtypekode_short == "C02" & hovedokosystem == "Skog",
-    "Semi-naturligMark",
-    hovedokosystem)
-  )
 
-dat2_long_figure <- dat2_long_5 %>% 
-  mutate(Naturmangfold= as.numeric(substr(naturmangfold, 1, 1))) %>% 
-  mutate(Tilstand= as.numeric(substr(tilstand, 1, 1))) %>% 
-  #select(-NiN_variable_code, -NiN_variable_value) %>% 
-  distinct()
-dat2_long_figure
-
-
-#identify duplicates
-dup.naturtype <- dat2_long_figure |>
-  dplyr::summarise(n = dplyr::n(), .by = c(identifikasjon_lokalId, hovedokosystem, kartleggingsar, lokalitetskvalitet, mosaikk, naturmangfold, naturtype,
-                                           naturtypekode_short, naturtype_full, tilstand, region, km2, m2, maned, oppdragstaker, Naturmangfold, Tilstand, 
-                                           NiN_variable_code)) |>
-  dplyr::filter(n > 1L)
-
-
-#remove duplicates
-data_clean1 <- dat2_long_figure |>
-  group_by(across(-NiN_variable_value)) %>%                 # group by all other columns
-  filter(!(is.na(NiN_variable_value) & any(!is.na(NiN_variable_value)))) %>%
-  ungroup()
-
-n_removed <- nrow(dat2_long_figure) - nrow(data_clean1)
-n_removed
-  
-dup2.naturtype <- data_clean1 |>
-  dplyr::summarise(n = dplyr::n(), .by = c(identifikasjon_lokalId, hovedokosystem, kartleggingsar, lokalitetskvalitet, mosaikk, naturmangfold, naturtype,
-                                           naturtypekode_short, naturtype_full, tilstand, region, km2, m2, maned, oppdragstaker, Naturmangfold, Tilstand, 
-                                           NiN_variable_code)) |>
-  dplyr::filter(n > 1L)  
-
-#remove a duplicate row in: 
-data_clean2 <- data_clean1 %>%
-  filter(
-    !(identifikasjon_lokalId == "NINFP2110037887" &
-        NiN_variable_code == "PRAK" &
-        NiN_variable_value %in% c(0, "0"))   # handle char or numeric 0
-  )
-
-dat2_long_figure <- data_clean2
-  
 saveRDS(dat2, "shinyData/naturtyper.rds")
 saveRDS(dat2_long_4, "shinyData/naturtyper_long.rds")
 

@@ -4,9 +4,9 @@ library(purrr)
 library(stringr)
 library(tidyr)
 library(grid)   # for arrow()
+library(ggrepel)
 
 make_rda_plots <- function(models_rda, 
-                           keep_top_k = NULL, keep_q = 0.9,
                            draw_points = FALSE, save_dir = "RDA_plots") {
   dir.create(save_dir, showWarnings = FALSE)
   
@@ -40,14 +40,11 @@ make_rda_plots <- function(models_rda,
       RDA1 = sc_lc[,1], RDA2 = sc_lc[,2]
     )
     
-    # choose longest predictor arrows
-    bplt <- dplyr::mutate(bplt, len = sqrt(RDA1^2 + RDA2^2))
-    if (!is.null(keep_top_k)) {
-      bplt <- dplyr::slice_max(bplt, len, n = keep_top_k, with_ties = FALSE)
-    } else if (!is.null(keep_q)) {
-      thr <- stats::quantile(bplt$len, keep_q, na.rm = TRUE)
-      bplt <- dplyr::filter(bplt, len >= thr)
+    # Keep only arrows with length > 0.5
+    if (!"length" %in% names(bplt)) {
+      bplt <- dplyr::mutate(bplt, length = sqrt(RDA1^2 + RDA2^2))
     }
+    bplt <- dplyr::filter(bplt, length > 0.4)
     
     # scale arrows to site cloud
     bplt_s <- scale_arrows(sites, bplt)
@@ -74,7 +71,7 @@ make_rda_plots <- function(models_rda,
         inherit.aes = FALSE,
         arrow = grid::arrow(length = unit(0.02, "npc"))
       ) +
-      ggplot2::geom_text(
+      ggrepel::geom_text_repel(
         data = bplt_s,
         aes(x = xend, y = yend, label = predictor),
         inherit.aes = FALSE,
@@ -85,7 +82,7 @@ make_rda_plots <- function(models_rda,
         aes(x = 0, y = 0, xend = xend, yend = yend),
         inherit.aes = FALSE
       ) +
-      ggplot2::geom_text(
+      ggrepel::geom_text_repel(
         data = resp_s,
         aes(x = xend, y = yend, label = predictor),
         inherit.aes = FALSE, fontface = "bold",
@@ -110,7 +107,7 @@ make_rda_plots <- function(models_rda,
 
 # ---- Run it ----
 # Longest 25% of predictor arrows, no points:
-make_rda_plots(models_rda, keep_q = 0.9, draw_points = FALSE, save_dir = "RDA_plots")
+make_rda_plots(models_rda, draw_points = FALSE, save_dir = "RDA_plots")
 # OR keep exactly top 5 arrows per plot:
 # make_rda_plots(models_rda, keep_top_k = 5, draw_points = FALSE)
 

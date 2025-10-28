@@ -1,19 +1,27 @@
 library(readxl)     # if you load from xlsx
 library(openxlsx)   # for write.xlsx if needed
 
-###### Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to Skog.
-###### And change Høstingsskog (C02) to semi-naturlig
+###### Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to HulEik.
+###### Seperate old forrest from rest
+###### Seperate torvmarksformer from rest
 data_clean1 <- dat2_long_4 %>%
   mutate(hovedokosystem = if_else(
     naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
-    "Skog",
+    "Annenskog",
     hovedokosystem)
   ) %>% 
   mutate(hovedokosystem = if_else(
-    naturtypekode_short == "C02" & hovedokosystem == "Skog",
-    "Semi-naturligMark",
+    naturtypekode_short %in% c("C10", "C11_01", "C11_02", "C11_03", "C11_04", "C11_05", "C12_01", "C12_02", "C12_03", "C12_04", "C12_05") 
+    & hovedokosystem == "Skog",
+    "GammelSkog",
     hovedokosystem)
-  )
+  ) %>% 
+  mutate(hovedokosystem = if_else(
+    naturtypekode_short %in% c("E01","E02", "E03", "E04", "E05", "E06", "E07", "E08", "E12_01", "E12_02") 
+    & hovedokosystem == "Våtmark",
+    "Torvmarksmassiv",
+    hovedokosystem))
+  
 
 data_clean2 <- data_clean1 %>% 
   mutate(naturmangfold1 = as.numeric(substr(naturmangfold, 1, 1))) %>% 
@@ -73,7 +81,7 @@ data_clean5 <- data_clean4 %>%
   filter(NiN_variable_code != "7SD-NS" |
            naturtypekode_short %in% c("C10", "C11_01", "C11_02", "C11_03", "C11_04", "C11_05", "C12_01", "C12_02", "C12_03", "C12_04", "C12_05", "C13", "C14", "C22", "E11_01") )
 
-#drop rows where 
+#drop rows where tilstand = 0, svært redusert 
 data_clean6 <- data_clean5 %>%
   filter(!tilstand1 == "0" )
 

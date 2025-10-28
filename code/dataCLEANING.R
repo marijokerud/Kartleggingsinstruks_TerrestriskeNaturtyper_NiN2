@@ -1,13 +1,18 @@
 library(readxl)     # if you load from xlsx
 library(openxlsx)   # for write.xlsx if needed
 
-###### Found out that nature type C01_Hule eiker was classified as Semi-naturligMark in 2018, changing to HulEik.
+###### Found out that nature type C01_Hule eiker in 2018 was classified as Semi-naturligMark in 2018, changing to HulEik.
 ###### Seperate old forrest from rest
 ###### Seperate torvmarksformer from rest
 data_clean1 <- dat2_long_4 %>%
   mutate(hovedokosystem = if_else(
     naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
-    "Annenskog",
+    "HulEik",
+    hovedokosystem)
+  ) %>% 
+  mutate(hovedokosystem = if_else(
+    naturtypekode_short == "C01" & hovedokosystem == "Skog",
+    "HulEik",
     hovedokosystem)
   ) %>% 
   mutate(hovedokosystem = if_else(

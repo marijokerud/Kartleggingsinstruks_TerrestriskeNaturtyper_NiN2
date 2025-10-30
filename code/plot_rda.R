@@ -8,7 +8,7 @@ library(ggrepel)
 
 
 
-make_rda_plots <- function(models_rda, 
+make_rda_plots <- function(models_rda, nin_lookup,
                            draw_points = FALSE, save_dir = "RDA_plots") {
   dir.create(save_dir, showWarnings = FALSE)
   
@@ -23,7 +23,7 @@ make_rda_plots <- function(models_rda,
     dplyr::mutate(arrows, xend = RDA1 * mult, yend = RDA2 * mult)
   }
   
-  purrr::walk(seq_len(nrow(models_rda)), function(i) {
+  walk(seq_len(nrow(models_rda)), function(i) {
     title <- models_rda$hovedokosystem[i]
     mfit  <- models_rda$rda[[i]]
     bplt  <- models_rda$biplot_scores[[i]]
@@ -34,7 +34,7 @@ make_rda_plots <- function(models_rda,
       message("Skipping ", title, " (no model or scores)."); return(invisible())
     }
     
-    # >>> use LC site scores (not WA) <<<
+    # site (LC) scores
     sc_lc <- as.data.frame(vegan::scores(mfit, display = "lc", choices = 1:2, scaling = 2))
     sites <- tibble::tibble(
       identifikasjon_lokalId = models_rda$row_id[[i]],
@@ -42,44 +42,66 @@ make_rda_plots <- function(models_rda,
       RDA1 = sc_lc[,1], RDA2 = sc_lc[,2]
     )
     
-    # Keep only arrows with length > 0.5
-    if (!"length" %in% names(bplt)) {
-      bplt <- dplyr::mutate(bplt, length = sqrt(RDA1^2 + RDA2^2))
-    }
-    bplt <- dplyr::filter(bplt, length > 0.4)
+    # clean predictor IDs to match lookup (same as you did before)
+    bplt <- bplt %>%
+      mutate(
+        predictor = predictor %>%
+          as.character() %>%
+          str_remove("^X+") %>%
+          str_replace_all(fixed("."), "-"),
+        length = if (!"length" %in% names(.)) sqrt(RDA1^2 + RDA2^2) else length
+      ) %>%
+      left_join(nin_lookup, by = "predictor")
     
-    # scale arrows to site cloud
-    bplt_s <- scale_arrows(sites, bplt)
+    # keep only Variable_Type of interest, and apply 50% rule within each type
+    bplt_keep <- bplt %>%
+      filter(Variable_Type %in% c("Tilstand", "Naturmangfold")) %>%
+      group_by(Variable_Type) %>%
+      mutate(max_len = max(length, na.rm = TRUE)) %>%
+      ungroup() %>%
+      filter(length >= 0.5 * max_len) %>%
+      select(-max_len)
+    
+    # If nothing survives (rare), silently skip plotting arrows
+    if (nrow(bplt_keep) == 0) {
+      message("No arrows pass 50% rule in ", title, ". Plotting sites + responses only.")
+    }
+    
+    # scale predictor and response arrows
+    bplt_s <- scale_arrows(sites, bplt_keep)
     resp_s <- scale_arrows(sites, dplyr::rename(resp, predictor = response))
     
-    # convex hulls per naturtypekode_short
+    # convex hulls
     hulls <- sites %>%
-      dplyr::filter(!is.na(RDA1), !is.na(RDA2)) %>%
-      dplyr::group_by(naturtypekode_short) %>%
-      dplyr::filter(dplyr::n_distinct(paste(RDA1, RDA2)) >= 3) %>%
-      dplyr::slice(chull(RDA1, RDA2)) %>%
-      dplyr::ungroup()
+      filter(!is.na(RDA1), !is.na(RDA2)) %>%
+      group_by(naturtypekode_short) %>%
+      filter(dplyr::n_distinct(paste(RDA1, RDA2)) >= 3) %>%
+      slice(chull(RDA1, RDA2)) %>%
+      ungroup()
     
-    p <- ggplot2::ggplot(sites, aes(RDA1, RDA2, colour = naturtypekode_short)) +
-      ggplot2::geom_polygon(
+    p <- ggplot(sites, aes(RDA1, RDA2, colour = naturtypekode_short)) +
+      geom_polygon(
         data = hulls,
         aes(RDA1, RDA2, fill = naturtypekode_short, group = naturtypekode_short),
         alpha = 0.20, colour = NA, inherit.aes = FALSE
       ) +
-      { if (draw_points) ggplot2::geom_point(size = 1.4, alpha = 0.6) } +
-      ggplot2::geom_segment(
+      { if (draw_points) geom_point(size = 1.4, alpha = 0.6) } +
+      # predictor arrows (filtered by 50% per Variable_Type)
+      geom_segment(
         data = bplt_s,
-        aes(x = 0, y = 0, xend = xend, yend = yend),
+        aes(x = 0, y = 0, xend = xend, yend = yend, linetype = Variable_Type),
         inherit.aes = FALSE,
         arrow = grid::arrow(length = unit(0.02, "npc"))
       ) +
       ggrepel::geom_text_repel(
         data = bplt_s,
-        aes(x = xend, y = yend, label = predictor),
-        inherit.aes = FALSE,
-        hjust = -0.1, vjust = 0.5
+        aes(x = xend, y = yend, label = predictor, colour = NULL),
+        inherit.aes = FALSE, size = 3,
+        max.overlaps = Inf, box.padding = 0.3, point.padding = 0.1,
+        min.segment.length = 0, segment.size = 0.3
       ) +
-      ggplot2::geom_segment(
+      # response arrows (always plotted, bold labels)
+      geom_segment(
         data = resp_s,
         aes(x = 0, y = 0, xend = xend, yend = yend),
         inherit.aes = FALSE
@@ -87,34 +109,23 @@ make_rda_plots <- function(models_rda,
       ggrepel::geom_text_repel(
         data = resp_s,
         aes(x = xend, y = yend, label = predictor),
-        inherit.aes = FALSE, fontface = "bold",
-        hjust = -0.1, vjust = 0.5
+        inherit.aes = FALSE, fontface = "bold", size = 3.2,
+        max.overlaps = Inf, box.padding = 0.35, point.padding = 0.15,
+        min.segment.length = 0, segment.size = 0.3
       ) +
-      ggplot2::coord_equal() +
-      ggplot2::labs(
+      coord_equal() +
+      labs(
         title = title,
         x = sprintf("RDA1 (%.1f%%)", 100 * as.numeric(vexp[1])),
         y = sprintf("RDA2 (%.1f%%)", 100 * as.numeric(vexp[2])),
-        colour = "Naturtype", fill = "Naturtype"
+        colour = "Naturtype", fill = "Naturtype", linetype = "Variable_Type"
       ) +
-      ggplot2::theme_bw() +
-      ggplot2::theme(legend.position = "right")
+      theme_bw() +
+      theme(legend.position = "right")
     
-    ggplot2::ggsave(
-      filename = file.path(save_dir, paste0("RDA_", stringr::str_replace_all(title, "[^[:alnum:]]+", "_"), ".png")),
+    ggsave(
+      filename = file.path(save_dir, paste0("RDA_", str_replace_all(title, "[^[:alnum:]]+", "_"), ".png")),
       plot = p, width = 7, height = 6, dpi = 300
     )
   })
 }
-
-# ---- Run it ----
-# Longest 25% of predictor arrows, no points:
-make_rda_plots(models_rda, draw_points = FALSE, save_dir = "RDA_plots")
-# OR keep exactly top 5 arrows per plot:
-# make_rda_plots(models_rda, keep_top_k = 5, draw_points = FALSE)
-
-
-
-
-
-

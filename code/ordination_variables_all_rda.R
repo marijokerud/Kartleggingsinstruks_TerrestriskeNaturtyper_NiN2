@@ -11,10 +11,23 @@ library(openxlsx)   # for write.xlsx if needed
 # ------------------------------------------------
 # 1) Wide data like your PCA (KEEP Y columns here)
 # ------------------------------------------------
-dat.RDA <- dat.PCA 
+names(data_clean6)
+dat.RDA1 <- data_clean6 %>%
+  select(-Variable_type) %>% 
+  pivot_wider(names_from = NiN_variable_code, values_from = NiN_variable_value)
+
+dat.RDA <- dat.RDA1 %>%
+  select( -kartleggingsar, -lokalitetskvalitet, -mosaikk, 
+          -naturmangfold_orig, -naturtype, -naturtype_full, -tilstand_orig, 
+          -region, -km2, - maned, -oppdragstaker) 
+
+#Save table as excel file
+#slice(1:5000)
+#write.xlsx(as.data.frame(dat.RDA), file = "data/test_RDA_HOS.xlsx", col.names = TRUE, row.names = TRUE, append = FALSE)
+
 
 # Explicit response names (new capitalization)
-y_cols <- c("naturmangfold1","tilstand1")
+y_cols <- c("naturmangfold","tilstand")
 stopifnot(all(y_cols %in% names(dat.RDA)))
 
 # ------------------------------------------------
@@ -99,7 +112,7 @@ models_rda <- dat.RDA %>%
         mutate(length = sqrt(RDA1^2 + RDA2^2))
     }),
     
-    # Response arrows (naturmangfold1, tilstand1)
+    # Response arrows (naturmangfold, tilstand)
     response_scores = map(rda, ~ {
       if (is.null(.x)) return(NULL)
       sp <- as.data.frame(vegan::scores(.x, display = "species", choices = 1:2, scaling = 2))
@@ -138,10 +151,25 @@ site_scores_all_rda <- models_rda %>%
   select(hovedokosystem, site_scores) %>%
   unnest(site_scores)
 
+nin.biplot <- nin.all %>% 
+  rename(predictor = NiN_variable_code)
+
 biplot_all_rda <- models_rda %>%
   filter(!map_lgl(biplot_scores, is.null)) %>%
   select(hovedokosystem, biplot_scores) %>%
-  unnest(biplot_scores)
+  unnest(biplot_scores) %>%
+  mutate(predictor = str_remove(as.character(predictor), "^X+")) %>%                 # drop leading X
+  mutate(predictor = str_replace_all(as.character(predictor), fixed("."), "-")) %>%  # change . -> -
+  inner_join(nin.biplot, by = "predictor") 
+
+# only plot arrows which has half or more the length of the longest arrow for each Variable_type 
+biplot_all_rda_plot <- biplot_all_rda %>%                                         
+  filter(Variable_type %in% c("Tilstand", "Naturmangfold")) %>%
+  group_by(Variable_type) %>%
+  mutate(max_len = max(length, na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(length >= 0.5 * max_len) %>%
+  select(-max_len)
 
 response_all_rda <- models_rda %>%
   filter(!map_lgl(response_scores, is.null)) %>%
@@ -158,7 +186,7 @@ var_all_rda <- models_rda %>%
   )
 
 # (Optional) write to Excel
-write.xlsx(as.data.frame(site_scores_all_rda), "RDA_plots/RDA_site_scores.xlsx", rowNames = FALSE)
-write.xlsx(as.data.frame(biplot_all_rda),     "RDA_plots/RDA_biplot_scores.xlsx", rowNames = FALSE)
-write.xlsx(as.data.frame(response_all_rda),   "RDA_plots/RDA_response_scores.xlsx", rowNames = FALSE)
-write.xlsx(as.data.frame(rda_var_all_rda),    "RDA_plots/RDA_axis_variance.xlsx", rowNames = FALSE)
+#write.xlsx(as.data.frame(site_scores_all_rda), "RDA_plots/RDA_site_scores.xlsx", rowNames = FALSE)
+write.xlsx(as.data.frame(biplot_all_rda),     "RDA_plots/RDA_biplot_scores3.xlsx", rowNames = FALSE)
+#write.xlsx(as.data.frame(response_all_rda),   "RDA_plots/RDA_response_scores.xlsx", rowNames = FALSE)
+#write.xlsx(as.data.frame(rda_var_all_rda),    "RDA_plots/RDA_axis_variance.xlsx", rowNames = FALSE)

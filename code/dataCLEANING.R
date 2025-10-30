@@ -1,7 +1,7 @@
 library(readxl)     # if you load from xlsx
 library(openxlsx)   # for write.xlsx if needed
 
-###### Found out that nature type C01_Hule eiker in 2018 was classified as Semi-naturligMark in 2018, changing to HulEik.
+###### Found out that nature type C01_Hule eiker in 2018 was classified as Semi-naturligMark in 2018, changing all C01 to HulEik.
 ###### Seperate old forrest from rest
 ###### Seperate torvmarksformer from rest
 data_clean1 <- dat2_long_4 %>%
@@ -16,15 +16,20 @@ data_clean1 <- dat2_long_4 %>%
     hovedokosystem)
   ) %>% 
   mutate(hovedokosystem = if_else(
-    naturtypekode_short %in% c("C10", "C11_01", "C11_02", "C11_03", "C11_04", "C11_05", "C12_01", "C12_02", "C12_03", "C12_04", "C12_05") 
+    naturtypekode_short %in% c("C11_01", "C11_02", "C11_03", "C11_04", "C11_05", "C12_01", "C12_02", "C12_03", "C12_04", "C12_05") 
     & hovedokosystem == "Skog",
     "GammelSkog",
     hovedokosystem)
   ) %>% 
   mutate(hovedokosystem = if_else(
-    naturtypekode_short %in% c("E01","E02", "E03", "E04", "E05", "E06", "E07", "E08", "E12_01", "E12_02") 
+    naturtypekode_short %in% c("E15", "E15_01", "E15_01_01", "E16") 
     & hovedokosystem == "Våtmark",
-    "Torvmarksmassiv",
+    "Semi-naturligMyr",
+    hovedokosystem)) %>% 
+  mutate(hovedokosystem = if_else(
+    naturtypekode_short %in% c("E11_01","E11_02", "E11_03", "E11_04", "E11_05", "E14_01", "E14_02", "E14_03") 
+    & hovedokosystem == "Våtmark",
+    "Våtmarkskog",
     hovedokosystem))
   
 

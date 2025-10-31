@@ -6,6 +6,15 @@ library(tidyr)
 library(grid)   # for arrow()
 library(ggrepel)
 
+nin_lookup <- nin.all %>%
+  transmute(
+    predictor = NiN_variable_code %>%
+      as.character() %>%
+      str_remove("^X+") %>%                   # drop leading X
+      str_replace_all(fixed("."), "-"),       # . -> -
+    Variable_type
+  )
+
 
 
 make_rda_plots <- function(models_rda, nin_lookup,
@@ -53,10 +62,10 @@ make_rda_plots <- function(models_rda, nin_lookup,
       ) %>%
       left_join(nin_lookup, by = "predictor")
     
-    # keep only Variable_Type of interest, and apply 50% rule within each type
+    # keep only Variable_type of interest, and apply 50% rule within each type
     bplt_keep <- bplt %>%
-      filter(Variable_Type %in% c("Tilstand", "Naturmangfold")) %>%
-      group_by(Variable_Type) %>%
+      filter(Variable_type %in% c("Tilstand", "Naturmangfold")) %>%
+      group_by(Variable_type) %>%
       mutate(max_len = max(length, na.rm = TRUE)) %>%
       ungroup() %>%
       filter(length >= 0.5 * max_len) %>%
@@ -68,8 +77,15 @@ make_rda_plots <- function(models_rda, nin_lookup,
     }
     
     # scale predictor and response arrows
-    bplt_s <- scale_arrows(sites, bplt_keep)
-    resp_s <- scale_arrows(sites, dplyr::rename(resp, predictor = response))
+    bplt_s <- scale_arrows(sites, bplt_keep) %>%
+      mutate(vt = Variable_type) 
+    resp_s <- scale_arrows(sites, dplyr::rename(resp, predictor = response))  %>%
+      mutate(vt = dplyr::case_when(
+          grepl("tilstand", predictor, ignore.case = TRUE) ~ "Tilstand",
+          grepl("naturmangfold", predictor, ignore.case = TRUE) ~ "Naturmangfold",
+          TRUE ~ "Response"
+        )
+      )
     
     # convex hulls
     hulls <- sites %>%
@@ -79,47 +95,57 @@ make_rda_plots <- function(models_rda, nin_lookup,
       slice(chull(RDA1, RDA2)) %>%
       ungroup()
     
-    p <- ggplot(sites, aes(RDA1, RDA2, colour = naturtypekode_short)) +
+    p <- ggplot2::ggplot(sites, aes(RDA1, RDA2, colour = naturtypekode_short)) +
+      # hulls...
       geom_polygon(
         data = hulls,
         aes(RDA1, RDA2, fill = naturtypekode_short, group = naturtypekode_short),
         alpha = 0.20, colour = NA, inherit.aes = FALSE
       ) +
       { if (draw_points) geom_point(size = 1.4, alpha = 0.6) } +
-      # predictor arrows (filtered by 50% per Variable_Type)
+      
+      # predictor arrows (black; linetype by Variable_type)
       geom_segment(
         data = bplt_s,
-        aes(x = 0, y = 0, xend = xend, yend = yend, linetype = Variable_Type),
-        inherit.aes = FALSE,
+        aes(x = 0, y = 0, xend = xend, yend = yend, color = vt),
+        inherit.aes = FALSE, linetype = "solid",
         arrow = grid::arrow(length = unit(0.02, "npc"))
       ) +
       ggrepel::geom_text_repel(
         data = bplt_s,
-        aes(x = xend, y = yend, label = predictor, colour = NULL),
+        aes(x = xend, y = yend, label = predictor, color = vt),
         inherit.aes = FALSE, size = 3,
         max.overlaps = Inf, box.padding = 0.3, point.padding = 0.1,
-        min.segment.length = 0, segment.size = 0.3
+        min.segment.length = 0, segment.size = 0.3,
+        show.legend = FALSE
       ) +
-      # response arrows (always plotted, bold labels)
+      
+      # --- response arrows: solid, same colors ---
       geom_segment(
         data = resp_s,
-        aes(x = 0, y = 0, xend = xend, yend = yend),
-        inherit.aes = FALSE
+        aes(x = 0, y = 0, xend = xend, yend = yend, color = vt),
+        inherit.aes = FALSE, linetype = "solid"
       ) +
       ggrepel::geom_text_repel(
         data = resp_s,
-        aes(x = xend, y = yend, label = predictor),
+        aes(x = xend, y = yend, label = predictor, color = vt),
         inherit.aes = FALSE, fontface = "bold", size = 3.2,
         max.overlaps = Inf, box.padding = 0.35, point.padding = 0.15,
-        min.segment.length = 0, segment.size = 0.3
+        min.segment.length = 0, segment.size = 0.3,
+        show.legend = FALSE
       ) +
+      
       coord_equal() +
       labs(
         title = title,
         x = sprintf("RDA1 (%.1f%%)", 100 * as.numeric(vexp[1])),
         y = sprintf("RDA2 (%.1f%%)", 100 * as.numeric(vexp[2])),
-        colour = "Naturtype", fill = "Naturtype", linetype = "Variable_Type"
-      ) +
+        colour = "Naturtype", fill = "Naturtype", linetype = "Variable_type" ) +
+      
+      scale_color_manual(
+        values = c("Naturmangfold" = "black", "Tilstand" = "grey50"),
+        name = "Variabeltype") +
+      
       theme_bw() +
       theme(legend.position = "right")
     
@@ -129,3 +155,6 @@ make_rda_plots <- function(models_rda, nin_lookup,
     )
   })
 }
+
+make_rda_plots(models_rda, nin_lookup, draw_points = FALSE, save_dir = "RDA_plots")
+

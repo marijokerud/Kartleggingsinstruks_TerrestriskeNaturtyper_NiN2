@@ -162,15 +162,6 @@ biplot_all_rda <- models_rda %>%
   mutate(predictor = str_replace_all(as.character(predictor), fixed("."), "-")) %>%  # change . -> -
   inner_join(nin.biplot, by = "predictor") 
 
-# only plot arrows which has half or more the length of the longest arrow for each Variable_type 
-biplot_all_rda_plot <- biplot_all_rda %>%                                         
-  filter(Variable_type %in% c("Tilstand", "Naturmangfold")) %>%
-  group_by(Variable_type) %>%
-  mutate(max_len = max(length, na.rm = TRUE)) %>%
-  ungroup() %>%
-  filter(length >= 0.5 * max_len) %>%
-  select(-max_len)
-
 response_all_rda <- models_rda %>%
   filter(!map_lgl(response_scores, is.null)) %>%
   select(hovedokosystem, response_scores) %>%
@@ -186,7 +177,7 @@ var_all_rda <- models_rda %>%
   )
 
 # (Optional) write to Excel
-#write.xlsx(as.data.frame(site_scores_all_rda), "RDA_plots/RDA_site_scores.xlsx", rowNames = FALSE)
-write.xlsx(as.data.frame(biplot_all_rda),     "RDA_plots/RDA_biplot_scores3.xlsx", rowNames = FALSE)
-#write.xlsx(as.data.frame(response_all_rda),   "RDA_plots/RDA_response_scores.xlsx", rowNames = FALSE)
-#write.xlsx(as.data.frame(rda_var_all_rda),    "RDA_plots/RDA_axis_variance.xlsx", rowNames = FALSE)
+write.xlsx(as.data.frame(site_scores_all_rda), "RDA_plots/RDA_site_scores.xlsx", rowNames = FALSE)
+write.xlsx(as.data.frame(biplot_all_rda),     "RDA_plots/RDA_biplot_scores.xlsx", rowNames = FALSE)
+write.xlsx(as.data.frame(response_all_rda),   "RDA_plots/RDA_response_scores.xlsx", rowNames = FALSE)
+write.xlsx(as.data.frame(var_all_rda),    "RDA_plots/RDA_axis_variance.xlsx", rowNames = FALSE)

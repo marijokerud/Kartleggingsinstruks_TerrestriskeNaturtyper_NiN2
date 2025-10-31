@@ -1,29 +1,32 @@
 library(ggplot2)
 library(openxlsx)
 
+dat.summary <- data_clean5
+dat.summary <- data_clean6
+names(dat.summary)
 #How many polygons per naturetype
-naturtype.summary <- dat2_long_figure %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand, Naturmangfold, Tilstand) %>% 
+naturtype.summary <- dat.summary %>% 
+  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
   group_by(naturtypekode_short) %>% 
   count()
 
 #Hovedøkosystem
-hovedokosystem.data <- dat2_long_figure %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand, Naturmangfold, Tilstand) %>% 
+hovedokosystem.data <- dat.summary %>% 
+  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
   group_by(hovedokosystem) %>% 
-  mutate(Tilstand_mean = mean(Tilstand)) %>% 
-  mutate(Tilstand_sd = sd(Tilstand)) %>% 
-  mutate(Naturmangfold_mean = mean(Naturmangfold, na.rm = TRUE)) %>% 
-  mutate(Naturmangfold_sd = sd(Naturmangfold, na.rm = TRUE))
+  mutate(Tilstand_mean = mean(tilstand)) %>% 
+  mutate(Tilstand_sd = sd(tilstand)) %>% 
+  mutate(Naturmangfold_mean = mean(naturmangfold, na.rm = TRUE)) %>% 
+  mutate(Naturmangfold_sd = sd(naturmangfold, na.rm = TRUE))
 
 #Naturtyper
-naturtype.data <- dat2_long_figure %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand, Naturmangfold, Tilstand) %>% 
+naturtype.data <- dat.summary %>% 
+  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
   group_by(naturtype) %>% 
-  mutate(Tilstand_mean = mean(Tilstand)) %>% 
-  mutate(Tilstand_sd = sd(Tilstand)) %>% 
-  mutate(Naturmangfold_mean = mean(Naturmangfold, na.rm = TRUE)) %>% 
-  mutate(Naturmangfold_sd = sd(Naturmangfold, na.rm = TRUE))
+  mutate(Tilstand_mean = mean(tilstand)) %>% 
+  mutate(Tilstand_sd = sd(tilstand)) %>% 
+  mutate(Naturmangfold_mean = mean(naturmangfold, na.rm = TRUE)) %>% 
+  mutate(Naturmangfold_sd = sd(naturmangfold, na.rm = TRUE))
 
 hovedokosystem.plot <- hovedokosystem.data %>% 
   ggplot(aes(x = Naturmangfold_mean, y = Tilstand_mean,
@@ -34,6 +37,12 @@ hovedokosystem.plot
 
 naturtype.skog <- naturtype.data %>% 
   filter(hovedokosystem == "Skog")
+naturtype.skog <- naturtype.data %>% 
+  filter(hovedokosystem == "GammelSkog")
+naturtype.skog <- naturtype.data %>% 
+  filter(hovedokosystem == "Semi-naturligMyr")
+naturtype.skog <- naturtype.data %>% 
+  filter(hovedokosystem == "Våtmarkskog")
 naturtype.våtmark <- naturtype.data %>% 
   filter(hovedokosystem == "Våtmark")
 naturtype.seminaturligmark <- naturtype.data %>% 

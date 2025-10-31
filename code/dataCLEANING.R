@@ -1,6 +1,7 @@
 library(readxl)     # if you load from xlsx
 library(openxlsx)   # for write.xlsx if needed
 
+#create a numeric column for tilstand and naturmangfold
 data_clean1 <- dat2_long_4 %>%
   rename(naturmangfold_orig = naturmangfold) %>% 
   rename(tilstand_orig = tilstand) %>% 

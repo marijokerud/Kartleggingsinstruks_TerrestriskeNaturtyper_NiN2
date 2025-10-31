@@ -16,6 +16,8 @@ Sys.setlocale("LC_ALL", "Norwegian") #works with æøå or use "no_NB.utf8"
 
 # UPDATE 29.06.23 to get the correct m2 values
 
+# UPDATE 31.10.25 adjusted hovedøkosystem division 
+
 varList <- c(
   "kartleggingsår",
   "tilstand",

@@ -72,9 +72,10 @@ data_clean5 <- data_clean4 %>%
 data_clean6 <- data_clean5 %>%
   mutate(hovedokosystem = if_else(
     naturtypekode_short == "C01" & hovedokosystem == "Semi-naturligMark",
-    "HulEik",
+    "Skog",
     hovedokosystem)
   ) %>% 
+  mutate(hovedokosystem_old = hovedokosystem) %>% 
   mutate(hovedokosystem = if_else(
     naturtypekode_short == "C01" & hovedokosystem == "Skog",
     "HulEik",

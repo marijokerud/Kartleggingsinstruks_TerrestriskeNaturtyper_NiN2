@@ -1,5 +1,7 @@
 library(dplyr)
 library(ggplot2)
+library(systemfonts)
+library(svglite)
 library(purrr)
 library(stringr)
 library(tidyr)
@@ -78,7 +80,8 @@ make_rda_plots <- function(models_rda, nin_lookup,
     
     # scale predictor and response arrows
     bplt_s <- scale_arrows(sites, bplt_keep) %>%
-      mutate(vt = Variable_type) 
+      mutate(vt = factor(Variable_type,
+                         levels = c("Naturmangfold", "Tilstand", "Response"))) 
     resp_s <- scale_arrows(sites, dplyr::rename(resp, predictor = response))  %>%
       mutate(vt = dplyr::case_when(
           grepl("tilstand", predictor, ignore.case = TRUE) ~ "Tilstand",
@@ -114,7 +117,7 @@ make_rda_plots <- function(models_rda, nin_lookup,
       ggrepel::geom_text_repel(
         data = bplt_s,
         aes(x = xend, y = yend, label = predictor, color = vt),
-        inherit.aes = FALSE, size = 3,
+        inherit.aes = FALSE, size = 6,
         max.overlaps = Inf, box.padding = 0.3, point.padding = 0.1,
         min.segment.length = 0, segment.size = 0.3,
         show.legend = FALSE
@@ -129,7 +132,7 @@ make_rda_plots <- function(models_rda, nin_lookup,
       ggrepel::geom_text_repel(
         data = resp_s,
         aes(x = xend, y = yend, label = predictor, color = vt),
-        inherit.aes = FALSE, fontface = "bold", size = 3.2,
+        inherit.aes = FALSE, fontface = "bold", size = 6,
         max.overlaps = Inf, box.padding = 0.35, point.padding = 0.15,
         min.segment.length = 0, segment.size = 0.3,
         show.legend = FALSE
@@ -145,16 +148,35 @@ make_rda_plots <- function(models_rda, nin_lookup,
       scale_color_manual(
         values = c("Naturmangfold" = "black", "Tilstand" = "grey50"),
         name = "Variabeltype") +
-      
+
       theme_bw() +
-      theme(legend.position = "right")
+      theme(
+        legend.position = "right",
+        plot.title = element_text(size=18),
+        axis.title.x = element_text(size=18, hjust=0.5),
+        axis.title.y = element_text(size=18, vjust=1),
+        axis.text.x  = element_text(size=16, color="black"),
+        axis.text.y  = element_text(size=16, color="black"),
+        legend.title = element_text(color="black", size=18),
+        legend.text  = element_text(color="black", size=16),
+        legend.key.size = unit(1, "cm"),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_line(colour = "lightgray"),
+        panel.grid.major.y = element_line(colour = "lightgray")
+      )
     
     ggsave(
-      filename = file.path(save_dir, paste0("RDA_", str_replace_all(title, "[^[:alnum:]]+", "_"), ".png")),
-      plot = p, width = 7, height = 6, dpi = 300
+      filename = file.path(save_dir, paste0("RDA_", str_replace_all(title, "[^[:alnum:]]+", "_"), ".svg")),
+      plot = p, width = 12, height = 10, dpi = 300
     )
   })
 }
 
 make_rda_plots(models_rda, nin_lookup, draw_points = FALSE, save_dir = "RDA_plots")
 
+### PNG
+ggsave(
+  filename = file.path(save_dir, paste0("RDA_", str_replace_all(title, "[^[:alnum:]]+", "_"), ".png")),
+  plot = p, width = 12, height = 10, dpi = 300
+)

@@ -54,7 +54,7 @@ naturtype.area <- dat.summary %>%
   distinct() %>% 
   left_join(naturtype.summary)
 
-write.xlsx(as.data.frame(naturtype.area), file = "output/naturtype_summary.xlsx", col.names = TRUE, row.names = TRUE, append = FALSE)
+write.xlsx(as.data.frame(naturtype.area), file = "output/HØS-tilpasset/naturtype_summary.xlsx", col.names = TRUE, row.names = TRUE, append = FALSE)
 
 # Means/SD by hovedokosystem + naturtype (one row per naturtype within each hovedøkosystem)
 naturtype_by_hovedokosystem <- dat.summary %>% 
@@ -92,7 +92,8 @@ hovedokosystem_summary <- dat.summary %>%
   )
 
 # --- Output folder ---
-dir.create("output", showWarnings = FALSE, recursive = TRUE)
+dir.create("output/HØS-tilpasset", showWarnings = FALSE, recursive = TRUE)
+
 
 # --- Styling helpers (consistent axes/labels/theme) ---
 x_limits <- c(-0.1, 3.5)
@@ -163,7 +164,7 @@ purrr::walk(
     
     p <- make_plot_for_ecosystem(df_ec, ec)
     
-    fn <- paste0("output/tilstand-naturmangfold-", slugify(ec), ".svg")
+    fn <- paste0("output/HØS-tilpasset/tilstand-naturmangfold-", slugify(ec), ".svg")
     ggsave(filename = fn, plot = p, width = 12, height = 8, dpi = 300)
   }
 )
@@ -187,5 +188,5 @@ hovedokosystem_plot <- ggplot(
        title = "Tilstand vs. naturmangfold – hovedøkosystem (gjennomsnitt)")
 
 
-ggsave("output/tilstand-naturmangfold-hovedokosystem.png",
+ggsave("output/HØS-tilpasset/tilstand-naturmangfold-hovedokosystem.png",
        plot = hovedokosystem_plot, width = 12, height = 8, dpi = 300)

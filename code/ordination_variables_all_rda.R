@@ -12,7 +12,9 @@ library(openxlsx)   # for write.xlsx if needed
 # 1) Wide data like your PCA (KEEP Y columns here)
 # ------------------------------------------------
 names(data_clean6)
+
 dat.RDA1 <- data_clean6 %>%
+  filter(!tilstand == "0" ) %>% #drop rows where tilstand = 0, svært redusert 
   select(-Variable_type) %>% 
   pivot_wider(names_from = NiN_variable_code, values_from = NiN_variable_value)
 

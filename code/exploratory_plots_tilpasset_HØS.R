@@ -185,8 +185,8 @@ hovedokosystem_plot <- ggplot(
   geom_point(size = 3) +
   base_axes +
   labs(colour = "Hovedøkosystem",
-       title = "Tilstand vs. naturmangfold – hovedøkosystem (gjennomsnitt)")
+       title = "Tilstand og naturmangfold – hovedøkosystem (gjennomsnitt)")
 
 
-ggsave("output/HØS-tilpasset/tilstand-naturmangfold-hovedokosystem.png",
+ggsave("output/HØS-tilpasset/tilstand-naturmangfold-hovedokosystem.svg",
        plot = hovedokosystem_plot, width = 12, height = 8, dpi = 300)

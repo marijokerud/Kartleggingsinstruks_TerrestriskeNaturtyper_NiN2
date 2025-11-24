@@ -85,11 +85,8 @@ hovedokosystem_summary <- dat.summary %>%
     Naturmangfold_sd   = sd(naturmangfold,   na.rm = TRUE),
     n = dplyr::n(),
     .groups = "drop"
-  ) %>% 
-  mutate(
-    Tilstand_sd = replace_na(Tilstand_sd, 0),
-    Naturmangfold_sd = replace_na(Naturmangfold_sd, 0)
-  )
+  ) 
+
 
 # --- Output folder ---
 dir.create("output/HØS-original", showWarnings = FALSE, recursive = TRUE)
@@ -185,8 +182,8 @@ hovedokosystem_plot <- ggplot(
   geom_point(size = 3) +
   base_axes +
   labs(colour = "Hovedøkosystem",
-       title = "Tilstand vs. naturmangfold – hovedøkosystem (gjennomsnitt)")
+       title = "Tilstand og naturmangfold – hovedøkosystem (gjennomsnitt)")
 
 
-ggsave("output/HØS-original/tilstand-naturmangfold-hovedokosystem.png",
+ggsave("output/HØS-original/tilstand-naturmangfold-hovedokosystem.svg",
        plot = hovedokosystem_plot, width = 12, height = 8, dpi = 300)

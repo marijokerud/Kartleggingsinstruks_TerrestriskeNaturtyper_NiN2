@@ -1,17 +1,21 @@
 # --- Packages ---
 library(dplyr)
 library(ggplot2)
+library(systemfonts)
+library(svglite)
+library(ggrepel)
 library(stringr)
 library(tidyr)
 library(purrr)
 library(ggpubr)
+library(openxlsx)   # for write.xlsx if needed
 
 Sys.setlocale("LC_ALL", "Norwegian") #works with æøå or use "no_NB.utf8"
 
 # If you don't have tidyr/str_replace_all loaded already
 
 # --- Data ---
-dat.summary <- data_clean5
+#dat.summary <- data_clean5
 dat.summary <- data_clean6
 
 # --- Helper: safe filename slug ---
@@ -34,15 +38,28 @@ slugify <- function(x) {
 # --- Summaries ---
 # How many polygons per naturtype (kept from your code)
 naturtype.summary <- dat.summary %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
+  select(identifikasjon_lokalId, hovedokosystem_old, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
   group_by(naturtypekode_short) %>% 
   count(name = "n_polygons") %>%
   ungroup()
 
-# Means/SD by hovedokosystem + naturtype (one row per naturtype within each hovedøkosystem)
+#How much area have been mapped per naturtype
+naturtype.area <- dat.summary %>% 
+  select(identifikasjon_lokalId, hovedokosystem_old, naturtype, naturtypekode_short, naturtype_full, km2, m2) %>% 
+  group_by(naturtypekode_short) %>% 
+  mutate(total_areal = sum(km2)) %>% 
+  mutate(average_areal = mean(m2)) %>%
+  mutate(median_areal = median(m2)) %>% 
+  select(-identifikasjon_lokalId, -km2, -m2) %>% 
+  distinct() %>% 
+  left_join(naturtype.summary)
+
+write.xlsx(as.data.frame(naturtype.area), file = "output/HØS-original/naturtype_summary_HØS.xlsx", col.names = TRUE, row.names = TRUE, append = FALSE)
+
+# Means/SD by hovedokosystem_old + naturtype (one row per naturtype within each hovedøkosystem)
 naturtype_by_hovedokosystem <- dat.summary %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
-  group_by(hovedokosystem, naturtype, naturtypekode_short) %>% 
+  select(identifikasjon_lokalId, hovedokosystem_old, naturtype, naturtypekode_short, naturtype_full, naturmangfold, tilstand) %>% 
+  group_by(hovedokosystem_old, naturtype, naturtypekode_short) %>% 
   summarise(
     Tilstand_mean        = mean(tilstand, na.rm = TRUE),
     Tilstand_sd          = sd(tilstand,   na.rm = TRUE),
@@ -57,10 +74,10 @@ naturtype_by_hovedokosystem <- dat.summary %>%
     Naturmangfold_sd = replace_na(Naturmangfold_sd, 0)
   )
 
-# Means/SD only by hovedokosystem (your earlier overview plot)
+# Means/SD only by hovedokosystem_old (your earlier overview plot)
 hovedokosystem_summary <- dat.summary %>% 
-  select(identifikasjon_lokalId, hovedokosystem, naturmangfold, tilstand) %>% 
-  group_by(hovedokosystem) %>% 
+  select(identifikasjon_lokalId, hovedokosystem_old, naturmangfold, tilstand) %>% 
+  group_by(hovedokosystem_old) %>% 
   summarise(
     Tilstand_mean = mean(tilstand, na.rm = TRUE),
     Tilstand_sd   = sd(tilstand,   na.rm = TRUE),
@@ -75,7 +92,8 @@ hovedokosystem_summary <- dat.summary %>%
   )
 
 # --- Output folder ---
-dir.create("output", showWarnings = FALSE, recursive = TRUE)
+dir.create("output/HØS-original", showWarnings = FALSE, recursive = TRUE)
+
 
 # --- Styling helpers (consistent axes/labels/theme) ---
 x_limits <- c(-0.1, 3.5)
@@ -99,12 +117,13 @@ base_axes <- list(
   theme_bw(),
   theme(
     legend.position = "bottom",
-    axis.title.x = element_text(size=14, hjust=0.5),
-    axis.title.y = element_text(size=14, vjust=1),
-    axis.text.x  = element_text(size=12, color="black"),
-    axis.text.y  = element_text(size=12, color="black"),
-    legend.title = element_text(color="black", size=11),
-    legend.text  = element_text(color="black", size=9),
+    plot.title = element_text(size=18),
+    axis.title.x = element_text(size=18, hjust=0.5),
+    axis.title.y = element_text(size=18, vjust=1),
+    axis.text.x  = element_text(size=16, color="black"),
+    axis.text.y  = element_text(size=16, color="black"),
+    legend.title = element_text(color="black", size=16),
+    legend.text  = element_text(color="black", size=14),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
     panel.grid.major.x = element_line(colour = "lightgray"),
@@ -128,24 +147,24 @@ make_plot_for_ecosystem <- function(df_ecosys, ecosys_name) {
                       ymax = Naturmangfold_mean + Naturmangfold_sd)) +
     # points + labels
     geom_point(size = 2) +
-    geom_text(aes(label = naturtypekode_short), size = 3, vjust = -0.7, show.legend = FALSE) +
+    geom_text_repel(aes(label = naturtypekode_short), size = 5, vjust = -0.7, show.legend = FALSE) +
     base_axes +
     labs(colour = "Naturtype",
-         title = paste0("Tilstand vs. naturmangfold – ", ecosys_name))
+         title = paste0("Tilstand og naturmangfold – ", ecosys_name))
 }
 
 # --- Generate & save one plot per hovedøkosystem ---
-eco_list <- sort(unique(naturtype_by_hovedokosystem$hovedokosystem))
+eco_list <- sort(unique(naturtype_by_hovedokosystem$hovedokosystem_old))
 
 purrr::walk(
   eco_list,
   function(ec) {
-    df_ec <- naturtype_by_hovedokosystem %>% filter(hovedokosystem == ec)
+    df_ec <- naturtype_by_hovedokosystem %>% filter(hovedokosystem_old == ec)
     if (nrow(df_ec) == 0) return(invisible(NULL))
     
     p <- make_plot_for_ecosystem(df_ec, ec)
     
-    fn <- paste0("output/tilstand-naturmangfold-", slugify(ec), ".png")
+    fn <- paste0("output/HØS-original/tilstand-naturmangfold-", slugify(ec), ".svg")
     ggsave(filename = fn, plot = p, width = 12, height = 8, dpi = 300)
   }
 )
@@ -153,7 +172,7 @@ purrr::walk(
 # --- Optional: overall hovedøkosystem plot (means per hovedøkosystem) ---
 hovedokosystem_plot <- ggplot(
   hovedokosystem_summary,
-  aes(x = Naturmangfold_mean, y = Tilstand_mean, colour = hovedokosystem)
+  aes(x = Naturmangfold_mean, y = Tilstand_mean, colour = hovedokosystem_old)
 ) +
   # VERTICAL error bars (Tilstand on y)
   geom_errorbar(aes(ymin = Tilstand_mean - Tilstand_sd,
@@ -169,5 +188,5 @@ hovedokosystem_plot <- ggplot(
        title = "Tilstand vs. naturmangfold – hovedøkosystem (gjennomsnitt)")
 
 
-ggsave("output/tilstand-naturmangfold-hovedokosystem.png",
+ggsave("output/HØS-original/tilstand-naturmangfold-hovedokosystem.png",
        plot = hovedokosystem_plot, width = 12, height = 8, dpi = 300)
